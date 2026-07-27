@@ -8,6 +8,10 @@ export interface DatabaseOptions {
 
 export type TransactionFunction<Args extends unknown[], Result> = (...args: Args) => Result;
 
+function isThenable(value: unknown): boolean {
+  return !!value && (typeof value === "object" || typeof value === "function") && typeof (value as { then?: unknown }).then === "function";
+}
+
 export class Database {
   private native: NativeDatabase;
   private transactionDepth: number;
@@ -49,6 +53,17 @@ export class Database {
       }
       try {
         const result = fn(...args);
+        if (isThenable(result)) {
+          if (depth === 0) {
+            this.native.exec("ROLLBACK");
+          } else {
+            this.native.exec(`ROLLBACK TO ${savepoint}`);
+            this.native.exec(`RELEASE ${savepoint}`);
+          }
+          throw new InfinitySqliteError(
+            "transaction() does not support async functions; the wrapped function must run and return synchronously"
+          );
+        }
         if (depth === 0) {
           this.native.exec("COMMIT");
         } else {
@@ -56,9 +71,9 @@ export class Database {
         }
         return result;
       } catch (error) {
-        if (depth === 0) {
+        if (depth === 0 && this.native.open) {
           this.native.exec("ROLLBACK");
-        } else {
+        } else if (this.native.open) {
           this.native.exec(`ROLLBACK TO ${savepoint}`);
           this.native.exec(`RELEASE ${savepoint}`);
         }
