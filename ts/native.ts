@@ -1,7 +1,7 @@
 import path from "path";
 
 export interface NativeStatement {
-  run(...params: unknown[]): { changes: number; lastInsertRowid: number };
+  run(...params: unknown[]): { changes: number; lastInsertRowid: number | bigint };
   get(...params: unknown[]): unknown;
   all(...params: unknown[]): unknown[];
   iterate(...params: unknown[]): IterableIterator<unknown>;
