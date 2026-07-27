@@ -10,7 +10,7 @@ export type TransactionFunction<Args extends unknown[], Result> = (...args: Args
 
 export class Database {
   private native: NativeDatabase;
-  private statementCache: Map<string, Statement<unknown>>;
+  private transactionDepth: number;
 
   constructor(filename: string, options: DatabaseOptions = {}) {
     const nativeModule = loadNative();
@@ -19,15 +19,11 @@ export class Database {
     } catch (error) {
       throw new InfinitySqliteError((error as Error).message);
     }
-    this.statementCache = new Map();
+    this.transactionDepth = 0;
   }
 
   prepare<Row = unknown>(sql: string): Statement<Row> {
-    const cached = this.statementCache.get(sql);
-    if (cached) return cached as Statement<Row>;
-    const statement = new Statement<Row>(this.native.prepare(sql));
-    this.statementCache.set(sql, statement as Statement<unknown>);
-    return statement;
+    return new Statement<Row>(this.native.prepare(sql));
   }
 
   exec(sql: string): this {
@@ -43,14 +39,32 @@ export class Database {
     fn: TransactionFunction<Args, Result>
   ): TransactionFunction<Args, Result> {
     const run = (...args: Args): Result => {
-      this.native.exec("BEGIN");
+      const depth = this.transactionDepth;
+      const savepoint = `infinitysqlite_sp_${depth}`;
+      this.transactionDepth = depth + 1;
+      if (depth === 0) {
+        this.native.exec("BEGIN");
+      } else {
+        this.native.exec(`SAVEPOINT ${savepoint}`);
+      }
       try {
         const result = fn(...args);
-        this.native.exec("COMMIT");
+        if (depth === 0) {
+          this.native.exec("COMMIT");
+        } else {
+          this.native.exec(`RELEASE ${savepoint}`);
+        }
         return result;
       } catch (error) {
-        this.native.exec("ROLLBACK");
+        if (depth === 0) {
+          this.native.exec("ROLLBACK");
+        } else {
+          this.native.exec(`ROLLBACK TO ${savepoint}`);
+          this.native.exec(`RELEASE ${savepoint}`);
+        }
         throw error;
+      } finally {
+        this.transactionDepth = depth;
       }
     };
     return run;
