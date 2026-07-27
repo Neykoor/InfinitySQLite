@@ -2,7 +2,7 @@ import { NativeStatement } from "./native";
 
 export interface RunResult {
   changes: number;
-  lastInsertRowid: number;
+  lastInsertRowid: number | bigint;
 }
 
 export class Statement<Row = unknown> {
