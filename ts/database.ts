@@ -46,6 +46,7 @@ export class Database {
       const depth = this.transactionDepth;
       const savepoint = `infinitysqlite_sp_${depth}`;
       this.transactionDepth = depth + 1;
+      let closed = false;
       if (depth === 0) {
         this.native.exec("BEGIN");
       } else {
@@ -54,6 +55,7 @@ export class Database {
       try {
         const result = fn(...args);
         if (isThenable(result)) {
+          closed = true;
           if (depth === 0) {
             this.native.exec("ROLLBACK");
           } else {
@@ -71,11 +73,13 @@ export class Database {
         }
         return result;
       } catch (error) {
-        if (depth === 0 && this.native.open) {
-          this.native.exec("ROLLBACK");
-        } else if (this.native.open) {
-          this.native.exec(`ROLLBACK TO ${savepoint}`);
-          this.native.exec(`RELEASE ${savepoint}`);
+        if (!closed && this.native.open) {
+          if (depth === 0) {
+            this.native.exec("ROLLBACK");
+          } else {
+            this.native.exec(`ROLLBACK TO ${savepoint}`);
+            this.native.exec(`RELEASE ${savepoint}`);
+          }
         }
         throw error;
       } finally {
