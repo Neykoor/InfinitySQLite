@@ -1,6 +1,6 @@
 import { loadNative, NativeDatabase } from "./native";
 import { Statement } from "./statement";
-import { InfinitySqliteError } from "./error";
+import { InfinitySqliteError, wrapNativeError } from "./error";
 
 export interface DatabaseOptions {
   readonly?: boolean;
@@ -21,22 +21,34 @@ export class Database {
     try {
       this.native = new nativeModule.InfinityDatabase(filename, options);
     } catch (error) {
-      throw new InfinitySqliteError((error as Error).message);
+      throw wrapNativeError(error);
     }
     this.transactionDepth = 0;
   }
 
   prepare<Row = unknown>(sql: string): Statement<Row> {
-    return new Statement<Row>(this.native.prepare(sql));
+    try {
+      return new Statement<Row>(this.native.prepare(sql));
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
   }
 
   exec(sql: string): this {
-    this.native.exec(sql);
+    try {
+      this.native.exec(sql);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
     return this;
   }
 
   pragma(pragma: string): unknown {
-    return this.native.pragma(pragma);
+    try {
+      return this.native.pragma(pragma);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
   }
 
   transaction<Args extends unknown[], Result>(
@@ -47,12 +59,12 @@ export class Database {
       const savepoint = `infinitysqlite_sp_${depth}`;
       this.transactionDepth = depth + 1;
       let closed = false;
-      if (depth === 0) {
-        this.native.exec("BEGIN");
-      } else {
-        this.native.exec(`SAVEPOINT ${savepoint}`);
-      }
       try {
+        if (depth === 0) {
+          this.native.exec("BEGIN");
+        } else {
+          this.native.exec(`SAVEPOINT ${savepoint}`);
+        }
         const result = fn(...args);
         if (isThenable(result)) {
           closed = true;
@@ -81,7 +93,8 @@ export class Database {
             this.native.exec(`RELEASE ${savepoint}`);
           }
         }
-        throw error;
+        if (error instanceof InfinitySqliteError) throw error;
+        throw wrapNativeError(error);
       } finally {
         this.transactionDepth = depth;
       }
@@ -90,7 +103,11 @@ export class Database {
   }
 
   close(): void {
-    this.native.close();
+    try {
+      this.native.close();
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
   }
 
   get open(): boolean {
