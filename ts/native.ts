@@ -31,6 +31,8 @@ export interface NativeDatabase {
   ): void;
   checkpoint(mode?: string): CheckpointResult;
   backup(destinationPath: string): void;
+  serialize(): Buffer;
+  deserialize(data: Buffer): void;
   close(): void;
   readonly open: boolean;
   readonly name: string;
