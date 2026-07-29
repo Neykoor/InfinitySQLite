@@ -2,40 +2,42 @@ import fs from "fs";
 import path from "path";
 import type { NativeModule } from "./native";
 
-const PREBUILD_PLATFORMS = ["linux", "darwin", "win32"];
-const PREBUILD_ARCHS = ["x64", "arm64"];
+let cachedAddon: NativeModule | null = null;
 
-let DEFAULT_ADDON: NativeModule | null = null;
+function detectMusl(): boolean {
+  return fs.existsSync("/lib/ld-musl-x86_64.so.1") || fs.existsSync("/lib/ld-musl-aarch64.so.1");
+}
 
-function isLinuxMusl(): boolean {
-  if (process.platform !== "linux") return false;
-  const report = process.report?.getReport();
-  const header = report && typeof report === "object" ? (report as { header?: { glibcVersionRuntime?: string } }).header : undefined;
-  return !header?.glibcVersionRuntime;
+function candidatePaths(): string[] {
+  const root = path.join(__dirname, "..");
+  const arch = process.arch;
+  const platform = process.platform;
+  const candidates: string[] = [];
+
+  if (platform === "linux" && detectMusl()) {
+    candidates.push(path.join(root, "prebuilds", `linuxmusl-${arch}.node`));
+  }
+  candidates.push(path.join(root, "prebuilds", `${platform}-${arch}.node`));
+  candidates.push(path.join(root, "build", "Release", "infinitysqlite.node"));
+  candidates.push(path.join(root, "build", "Debug", "infinitysqlite.node"));
+
+  return candidates;
 }
 
 export function getPrebuildPath(): string | null {
-  if (!PREBUILD_PLATFORMS.includes(process.platform) || !PREBUILD_ARCHS.includes(process.arch)) {
-    return null;
-  }
-  const target = `${isLinuxMusl() ? "linuxmusl" : process.platform}-${process.arch}`;
-  const filename = path.join(__dirname, "..", "prebuilds", `${target}.node`);
-  return fs.existsSync(filename) ? filename : null;
+  const found = candidatePaths().find((candidate) => candidate.includes("prebuilds") && fs.existsSync(candidate));
+  return found ?? null;
 }
 
 export function getBinding(): NativeModule {
-  if (DEFAULT_ADDON) return DEFAULT_ADDON;
+  if (cachedAddon) return cachedAddon;
 
-  const prebuildPath = getPrebuildPath();
-  if (prebuildPath) {
-    DEFAULT_ADDON = require(prebuildPath) as NativeModule;
-    return DEFAULT_ADDON;
+  for (const candidate of candidatePaths()) {
+    if (fs.existsSync(candidate)) {
+      cachedAddon = require(candidate) as NativeModule;
+      return cachedAddon;
+    }
   }
 
-  let buildPath = path.join(__dirname, "..", "build", "Release", "infinitysqlite.node");
-  if (!fs.existsSync(buildPath)) {
-    buildPath = path.join(__dirname, "..", "build", "Debug", "infinitysqlite.node");
-  }
-  DEFAULT_ADDON = require(buildPath) as NativeModule;
-  return DEFAULT_ADDON;
+  throw new Error("InfinitySQLite: no se encontro ningun binario nativo compatible con esta plataforma");
 }
