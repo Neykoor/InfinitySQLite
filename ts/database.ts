@@ -1,12 +1,14 @@
 import { loadNative, NativeDatabase } from "./native";
 import { Statement } from "./statement";
 import { InfinitySqliteError, wrapNativeError } from "./error";
+import { SerialQueue, QueuedTask } from "./queue";
 
 export interface DatabaseOptions {
   readonly?: boolean;
 }
 
 export type TransactionFunction<Args extends unknown[], Result> = (...args: Args) => Result;
+export type SerializedFunction<Args extends unknown[], Result> = (...args: Args) => Result | Promise<Result>;
 
 function isThenable(value: unknown): boolean {
   return !!value && (typeof value === "object" || typeof value === "function") && typeof (value as { then?: unknown }).then === "function";
@@ -15,6 +17,7 @@ function isThenable(value: unknown): boolean {
 export class Database {
   private native: NativeDatabase;
   private transactionDepth: number;
+  private queue: SerialQueue;
 
   constructor(filename: string, options: DatabaseOptions = {}) {
     const nativeModule = loadNative();
@@ -24,6 +27,7 @@ export class Database {
       throw wrapNativeError(error);
     }
     this.transactionDepth = 0;
+    this.queue = new SerialQueue();
   }
 
   prepare<Row = unknown>(sql: string): Statement<Row> {
@@ -100,6 +104,19 @@ export class Database {
       }
     };
     return run;
+  }
+
+  serialize<Args extends unknown[], Result>(
+    fn: SerializedFunction<Args, Result>
+  ): (...args: Args) => Promise<Result> {
+    return (...args: Args): Promise<Result> => {
+      const task: QueuedTask<Result> = () => fn(...args);
+      return this.queue.push(task);
+    };
+  }
+
+  get pendingSerialized(): number {
+    return this.queue.pending;
   }
 
   private rollbackTransaction(depth: number, savepoint: string): void {
