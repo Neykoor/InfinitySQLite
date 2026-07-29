@@ -14,13 +14,14 @@ export interface NativeDatabase {
   prepare(sql: string): NativeStatement;
   exec(sql: string): NativeDatabase;
   pragma(pragma: string): unknown;
+  setBusyTimeout(timeoutMs: number): NativeDatabase;
   close(): void;
   readonly open: boolean;
   readonly name: string;
 }
 
 export interface NativeModule {
-  InfinityDatabase: new (filename: string, options?: { readonly?: boolean }) => NativeDatabase;
+  InfinityDatabase: new (filename: string, options?: { readonly?: boolean; timeout?: number }) => NativeDatabase;
 }
 
 export function loadNative(): NativeModule {
