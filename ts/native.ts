@@ -1,4 +1,4 @@
-import path from "path";
+import { getBinding } from "./binding";
 
 export interface NativeStatement {
   run(...params: unknown[]): { changes: number; lastInsertRowid: number | bigint };
@@ -24,6 +24,5 @@ export interface NativeModule {
 }
 
 export function loadNative(): NativeModule {
-  const buildPath = path.join(__dirname, "..", "build", "Release", "infinitysqlite.node");
-  return require(buildPath) as NativeModule;
+  return getBinding();
 }
