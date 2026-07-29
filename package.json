@@ -1,5 +1,5 @@
 {
-  "name": "InfinitySQLite",
+  "name": "infinitysqlite",
   "version": "1.1.0",
   "description": "Native SQLite3 binding for Node.js, own implementation in C++ with N-API",
   "main": "dist/index.js",
