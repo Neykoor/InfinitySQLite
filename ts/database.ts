@@ -58,48 +58,61 @@ export class Database {
       const depth = this.transactionDepth;
       const savepoint = `infinitysqlite_sp_${depth}`;
       this.transactionDepth = depth + 1;
-      let closed = false;
       try {
-        if (depth === 0) {
-          this.native.exec("BEGIN");
-        } else {
-          this.native.exec(`SAVEPOINT ${savepoint}`);
-        }
-        const result = fn(...args);
-        if (isThenable(result)) {
-          closed = true;
+        try {
           if (depth === 0) {
-            this.native.exec("ROLLBACK");
+            this.native.exec("BEGIN");
           } else {
-            this.native.exec(`ROLLBACK TO ${savepoint}`);
-            this.native.exec(`RELEASE ${savepoint}`);
+            this.native.exec(`SAVEPOINT ${savepoint}`);
           }
+        } catch (error) {
+          throw wrapNativeError(error);
+        }
+
+        let result: Result;
+        try {
+          result = fn(...args);
+        } catch (error) {
+          this.rollbackTransaction(depth, savepoint);
+          throw error;
+        }
+
+        if (isThenable(result)) {
+          this.rollbackTransaction(depth, savepoint);
           throw new InfinitySqliteError(
             "transaction() does not support async functions; the wrapped function must run and return synchronously"
           );
         }
-        if (depth === 0) {
-          this.native.exec("COMMIT");
-        } else {
-          this.native.exec(`RELEASE ${savepoint}`);
-        }
-        return result;
-      } catch (error) {
-        if (!closed && this.native.open) {
+
+        try {
           if (depth === 0) {
-            this.native.exec("ROLLBACK");
+            this.native.exec("COMMIT");
           } else {
-            this.native.exec(`ROLLBACK TO ${savepoint}`);
             this.native.exec(`RELEASE ${savepoint}`);
           }
+        } catch (error) {
+          throw wrapNativeError(error);
         }
-        if (error instanceof InfinitySqliteError) throw error;
-        throw wrapNativeError(error);
+
+        return result;
       } finally {
         this.transactionDepth = depth;
       }
     };
     return run;
+  }
+
+  private rollbackTransaction(depth: number, savepoint: string): void {
+    if (!this.native.open) return;
+    try {
+      if (depth === 0) {
+        this.native.exec("ROLLBACK");
+      } else {
+        this.native.exec(`ROLLBACK TO ${savepoint}`);
+        this.native.exec(`RELEASE ${savepoint}`);
+      }
+    } catch {
+    }
   }
 
   close(): void {
