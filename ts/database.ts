@@ -1,4 +1,4 @@
-import { loadNative, NativeDatabase } from "./native";
+import { loadNative, NativeDatabase, CheckpointResult } from "./native";
 import { Statement } from "./statement";
 import { InfinitySqliteError, wrapNativeError } from "./error";
 import { SerialQueue, QueuedTask } from "./queue";
@@ -10,6 +10,12 @@ export interface DatabaseOptions {
 
 export type TransactionFunction<Args extends unknown[], Result> = (...args: Args) => Result;
 export type SerializedFunction<Args extends unknown[], Result> = (...args: Args) => Result | Promise<Result>;
+export type CheckpointMode = "PASSIVE" | "FULL" | "RESTART" | "TRUNCATE";
+
+export interface FunctionOptions {
+  argCount?: number;
+  deterministic?: boolean;
+}
 
 function isThenable(value: unknown): boolean {
   return !!value && (typeof value === "object" || typeof value === "function") && typeof (value as { then?: unknown }).then === "function";
@@ -127,6 +133,31 @@ export class Database {
       throw wrapNativeError(error);
     }
     return this;
+  }
+
+  function(name: string, fn: (...args: unknown[]) => unknown, options: FunctionOptions = {}): this {
+    try {
+      this.native.registerFunction(name, fn, options.argCount ?? -1, options.deterministic ?? false);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
+    return this;
+  }
+
+  checkpoint(mode: CheckpointMode = "PASSIVE"): CheckpointResult {
+    try {
+      return this.native.checkpoint(mode);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
+  }
+
+  backup(destinationPath: string): void {
+    try {
+      this.native.backup(destinationPath);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
   }
 
   private rollbackTransaction(depth: number, savepoint: string): void {
