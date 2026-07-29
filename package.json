@@ -17,7 +17,7 @@
     "build:ts": "tsc -p .",
     "build": "npm run build:native && npm run build:ts",
     "prebuild": "prebuildify --napi --strip -t 20.0.0",
-    "install": "node dist/scripts/install.js"
+    "install": "node dist/install.js"
   },
   "dependencies": {
     "node-addon-api": "^8.0.0"
