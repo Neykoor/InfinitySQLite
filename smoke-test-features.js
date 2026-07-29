@@ -136,6 +136,78 @@ function testCustomFunctionErrorPropagates() {
   db.close();
 }
 
+function testAggregateBasic() {
+  const db = new Database(":memory:");
+  db.aggregate("sum_weighted", {
+    start: 0,
+    step: (acc, weight) => acc + weight,
+  });
+  db.exec("CREATE TABLE pulls (rarity_weight REAL)");
+  db.exec("INSERT INTO pulls VALUES (0.5), (0.25), (0.125)");
+  const row = db.prepare("SELECT sum_weighted(rarity_weight) AS total FROM pulls").get();
+  assert(row.total === 0.875, "db.aggregate() acumula el step() sobre todas las filas");
+  db.close();
+}
+
+function testAggregateWithResult() {
+  const db = new Database(":memory:");
+  db.aggregate("gacha_ev", {
+    start: 0,
+    step: (acc, weight) => acc + weight,
+    result: (acc) => Math.round(acc * 1000) / 1000,
+  });
+  db.exec("CREATE TABLE pulls (rarity_weight REAL)");
+  db.exec("INSERT INTO pulls VALUES (0.3333), (0.3333)");
+  const row = db.prepare("SELECT gacha_ev(rarity_weight) AS total FROM pulls").get();
+  assert(row.total === 0.667, "result() transforma el acumulador final antes de devolverlo a SQL");
+  db.close();
+}
+
+function testAggregateEmptyGroup() {
+  const db = new Database(":memory:");
+  db.aggregate("sum_weighted", {
+    start: 0,
+    step: (acc, weight) => acc + weight,
+  });
+  db.exec("CREATE TABLE pulls (rarity_weight REAL)");
+  const row = db.prepare("SELECT sum_weighted(rarity_weight) AS total FROM pulls").get();
+  assert(row.total === 0, "sin filas, el agregado devuelve el start() sin llamar step()");
+  db.close();
+}
+
+function testAggregateGroupBy() {
+  const db = new Database(":memory:");
+  db.aggregate("sum_weighted", {
+    start: 0,
+    step: (acc, weight) => acc + weight,
+  });
+  db.exec("CREATE TABLE pulls (session_id TEXT, rarity_weight REAL)");
+  db.exec("INSERT INTO pulls VALUES ('a', 1), ('a', 2), ('b', 10)");
+  const rows = db.prepare("SELECT session_id, sum_weighted(rarity_weight) AS total FROM pulls GROUP BY session_id ORDER BY session_id").all();
+  assert(rows[0].total === 3 && rows[1].total === 10, "el acumulador se resetea por cada grupo de GROUP BY");
+  db.close();
+}
+
+function testAggregateStepErrorPropagates() {
+  const db = new Database(":memory:");
+  db.aggregate("explota_agg", {
+    start: 0,
+    step: () => {
+      throw new Error("boom en step");
+    },
+  });
+  db.exec("CREATE TABLE t (v INTEGER)");
+  db.exec("INSERT INTO t VALUES (1)");
+  let threw = false;
+  try {
+    db.prepare("SELECT explota_agg(v) FROM t").get();
+  } catch {
+    threw = true;
+  }
+  assert(threw, "un error lanzado dentro de step() se propaga como error SQL, no crashea el proceso");
+  db.close();
+}
+
 function testCheckpoint() {
   const path = require("path").join(require("os").tmpdir(), `infinitysqlite-checkpoint-${Date.now()}.sqlite`);
   const db = new Database(path);
@@ -180,6 +252,11 @@ async function main() {
   testForeignKeyConstraintTyped();
   testCustomFunction();
   testCustomFunctionErrorPropagates();
+  testAggregateBasic();
+  testAggregateWithResult();
+  testAggregateEmptyGroup();
+  testAggregateGroupBy();
+  testAggregateStepErrorPropagates();
   testCheckpoint();
   testBackup();
   console.log("Todas las pruebas nuevas pasaron.");
@@ -189,3 +266,4 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+          
