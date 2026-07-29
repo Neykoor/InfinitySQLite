@@ -9,7 +9,7 @@ export interface DatabaseOptions {
 }
 
 export type TransactionFunction<Args extends unknown[], Result> = (...args: Args) => Result;
-export type SerializedFunction<Args extends unknown[], Result> = (...args: Args) => Result | Promise<Result>;
+export type QueuedFunction<Args extends unknown[], Result> = (...args: Args) => Result | Promise<Result>;
 export type CheckpointMode = "PASSIVE" | "FULL" | "RESTART" | "TRUNCATE";
 
 export interface FunctionOptions {
@@ -24,7 +24,7 @@ function isThenable(value: unknown): boolean {
 export class Database {
   private native: NativeDatabase;
   private transactionDepth: number;
-  private queue: SerialQueue;
+  private taskQueue: SerialQueue;
 
   constructor(filename: string, options: DatabaseOptions = {}) {
     const nativeModule = loadNative();
@@ -34,7 +34,7 @@ export class Database {
       throw wrapNativeError(error);
     }
     this.transactionDepth = 0;
-    this.queue = new SerialQueue();
+    this.taskQueue = new SerialQueue();
   }
 
   prepare<Row = unknown>(sql: string): Statement<Row> {
@@ -113,17 +113,17 @@ export class Database {
     return run;
   }
 
-  serialize<Args extends unknown[], Result>(
-    fn: SerializedFunction<Args, Result>
+  queue<Args extends unknown[], Result>(
+    fn: QueuedFunction<Args, Result>
   ): (...args: Args) => Promise<Result> {
     return (...args: Args): Promise<Result> => {
       const task: QueuedTask<Result> = () => fn(...args);
-      return this.queue.push(task);
+      return this.taskQueue.push(task);
     };
   }
 
-  get pendingSerialized(): number {
-    return this.queue.pending;
+  get pendingQueued(): number {
+    return this.taskQueue.pending;
   }
 
   setBusyTimeout(timeoutMs: number): this {
