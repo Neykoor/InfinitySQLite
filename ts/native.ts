@@ -10,11 +10,19 @@ export interface NativeStatement {
   columns(): string[];
 }
 
+export interface CheckpointResult {
+  walPages: number;
+  checkpointedPages: number;
+}
+
 export interface NativeDatabase {
   prepare(sql: string): NativeStatement;
   exec(sql: string): NativeDatabase;
   pragma(pragma: string): unknown;
   setBusyTimeout(timeoutMs: number): NativeDatabase;
+  registerFunction(name: string, fn: (...args: unknown[]) => unknown, nArg: number, deterministic: boolean): void;
+  checkpoint(mode?: string): CheckpointResult;
+  backup(destinationPath: string): void;
   close(): void;
   readonly open: boolean;
   readonly name: string;
