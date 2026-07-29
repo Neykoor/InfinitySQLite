@@ -51,15 +51,15 @@ async function testSerializeQueueOrder() {
   const db = new Database(":memory:");
   db.exec("CREATE TABLE t (v INTEGER)");
   const order = [];
-  const task = db.serialize(async (label, delay) => {
+  const task = db.queue(async (label, delay) => {
     await sleep(delay);
     order.push(label);
   });
   const p1 = task("A", 30);
   const p2 = task("B", 0);
   await Promise.all([p1, p2]);
-  assert(order.join(",") === "A,B", "serialize() respeta el orden de encolado aunque B sea mas rapido");
-  assert(db.pendingSerialized === 0, "pendingSerialized vuelve a 0 tras vaciar la cola");
+  assert(order.join(",") === "A,B", "queue() respeta el orden de encolado aunque B sea mas rapido");
+  assert(db.pendingQueued === 0, "pendingQueued vuelve a 0 tras vaciar la cola");
   db.close();
 }
 
