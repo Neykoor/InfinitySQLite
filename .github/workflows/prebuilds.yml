@@ -1,0 +1,73 @@
+name: prebuilds
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+          - os: ubuntu-latest
+            target: linux-arm64
+            arch: arm64
+          - os: ubuntu-24.04
+            target: linuxmusl-x64
+            container: node:20-alpine
+          - os: macos-13
+            target: darwin-x64
+          - os: macos-14
+            target: darwin-arm64
+          - os: windows-latest
+            target: win32-x64
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar toolchain nativo (alpine)
+        if: matrix.container != ''
+        run: apk add --no-cache python3 make g++ git
+
+      - uses: actions/setup-node@v4
+        if: matrix.container == ''
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm install --ignore-scripts
+
+      - name: Generar prebuild
+        run: npx prebuildify --napi --strip -t 20.0.0 ${{ matrix.arch && '--arch' || '' }} ${{ matrix.arch }}
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: prebuild-${{ matrix.target }}
+          path: prebuilds/*.node
+
+  collect:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: prebuild-*
+          path: prebuilds
+          merge-multiple: true
+
+      - name: Commitear prebuilds
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add prebuilds
+          git commit -m "chore: actualizar prebuilds" || echo "sin cambios"
+          git push
