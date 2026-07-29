@@ -17,6 +17,14 @@ export interface FunctionOptions {
   deterministic?: boolean;
 }
 
+export interface AggregateOptions<Acc = unknown> {
+  start?: Acc;
+  step: (accumulator: Acc, ...args: unknown[]) => Acc;
+  result?: (accumulator: Acc) => unknown;
+  argCount?: number;
+  deterministic?: boolean;
+}
+
 function isThenable(value: unknown): boolean {
   return !!value && (typeof value === "object" || typeof value === "function") && typeof (value as { then?: unknown }).then === "function";
 }
@@ -138,6 +146,22 @@ export class Database {
   function(name: string, fn: (...args: unknown[]) => unknown, options: FunctionOptions = {}): this {
     try {
       this.native.registerFunction(name, fn, options.argCount ?? -1, options.deterministic ?? false);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
+    return this;
+  }
+
+  aggregate<Acc = unknown>(name: string, options: AggregateOptions<Acc>): this {
+    try {
+      this.native.registerAggregate(
+        name,
+        options.step as (accumulator: unknown, ...args: unknown[]) => unknown,
+        options.argCount ?? -1,
+        options.deterministic ?? false,
+        (options.result as ((accumulator: unknown) => unknown) | undefined) ?? null,
+        options.start ?? null
+      );
     } catch (error) {
       throw wrapNativeError(error);
     }
