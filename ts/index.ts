@@ -1,6 +1,16 @@
 import { Database } from "./database";
+import { Statement } from "./statement";
+import { InfinitySqliteError } from "./error";
 
-export { Database };
-export { Statement } from "./statement";
-export { InfinitySqliteError } from "./error";
-export default Database;
+type InfinitySqliteExports = typeof Database & {
+  Database: typeof Database;
+  Statement: typeof Statement;
+  InfinitySqliteError: typeof InfinitySqliteError;
+};
+
+const exported = Database as InfinitySqliteExports;
+exported.Database = Database;
+exported.Statement = Statement;
+exported.InfinitySqliteError = InfinitySqliteError;
+
+export = exported;
