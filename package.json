@@ -1,6 +1,6 @@
 {
   "name": "infinitysqlite",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Native SQLite3 binding for Node.js, own implementation in C++ with N-API",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,7 +17,9 @@
     "build:ts": "tsc -p .",
     "build": "npm run build:native && npm run build:ts",
     "prebuild": "prebuildify --napi --strip -t 20.0.0",
-    "install": "node dist/install.js"
+    "install": "node dist/install.js",
+    "prepack": "npm run build:ts",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "node-addon-api": "^8.0.0",
