@@ -243,6 +243,26 @@ function testBackup() {
   fs.rmSync(destPath, { force: true });
 }
 
+function testSerializeDeserialize() {
+  const db = new Database(":memory:");
+  db.exec("CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)");
+  db.prepare("INSERT INTO t (v) VALUES (?)").run("uno");
+  db.prepare("INSERT INTO t (v) VALUES (?)").run("dos");
+
+  const dump = db.serialize();
+  assert(Buffer.isBuffer(dump) && dump.length > 0, "serialize() devuelve un Buffer con contenido");
+  db.close();
+
+  const restored = new Database(":memory:");
+  restored.deserialize(dump);
+  const rows = restored.prepare("SELECT v FROM t ORDER BY id").all();
+  assert(rows.length === 2 && rows[0].v === "uno" && rows[1].v === "dos", "deserialize() reconstruye exactamente las mismas filas");
+  restored.prepare("INSERT INTO t (v) VALUES (?)").run("tres");
+  const afterInsert = restored.prepare("SELECT COUNT(*) AS c FROM t").get();
+  assert(afterInsert.c === 3, "la DB deserializada sigue siendo escribible normalmente");
+  restored.close();
+}
+
 async function main() {
   testNestedTransactions();
   testNestedTransactionRollback();
@@ -259,6 +279,7 @@ async function main() {
   testAggregateStepErrorPropagates();
   testCheckpoint();
   testBackup();
+  testSerializeDeserialize();
   console.log("Todas las pruebas nuevas pasaron.");
 }
 
@@ -266,4 +287,3 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
-          
