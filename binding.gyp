@@ -10,6 +10,7 @@
         "deps/sqlite3/sqlite3.c"
       ],
       "include_dirs": [
+        ".",
         "<!@(node -p \"require('node-addon-api').include\")",
         "deps/sqlite3"
       ],
@@ -31,8 +32,13 @@
         "SQLITE_USE_ALLOCA",
         "HAVE_USLEEP=1"
       ],
-      "cflags_cc": ["-std=c++17", "-fexceptions"],
-      "cflags_c": ["-w"],
+      "cflags_cc": [
+        "-std=c++17",
+        "-fexceptions"
+      ],
+      "cflags_c": [
+        "-w"
+      ],
       "xcode_settings": {
         "CLANG_CXX_LANGUAGE_STANDARD": "c++17",
         "GCC_ENABLE_CPP_EXCEPTIONS": "YES"
@@ -40,11 +46,21 @@
       "msvs_settings": {
         "VCCLCompilerTool": {
           "ExceptionHandling": 1,
-          "AdditionalOptions": ["/std:c++17"]
+          "AdditionalOptions": [
+            "/std:c++17"
+          ]
         }
       },
       "conditions": [
-        ["OS=='linux'", { "libraries": ["-ldl", "-lpthread"] }]
+        [
+          "OS=='linux'",
+          {
+            "libraries": [
+              "-ldl",
+              "-lpthread"
+            ]
+          }
+        ]
       ]
     }
   ]
