@@ -1,21 +1,30 @@
 {
   "name": "InfinitySQLite",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Native SQLite3 binding for Node.js, own implementation in C++ with N-API",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "gypfile": true,
+  "files": [
+    "binding.gyp",
+    "src/**/*.[ch]pp",
+    "deps/sqlite3/**",
+    "dist/**",
+    "prebuilds/**"
+  ],
   "scripts": {
     "build:native": "node-gyp rebuild",
     "build:ts": "tsc -p .",
     "build": "npm run build:native && npm run build:ts",
-    "install": "node-gyp rebuild"
+    "prebuild": "prebuildify --napi --strip -t 20.0.0",
+    "install": "node dist/scripts/install.js"
   },
   "dependencies": {
     "node-addon-api": "^8.0.0"
   },
   "devDependencies": {
     "node-gyp": "^10.0.0",
+    "prebuildify": "^6.0.1",
     "typescript": "^5.5.0",
     "@types/node": "^20.0.0"
   },
