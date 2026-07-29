@@ -1,5 +1,5 @@
 import { execFileSync } from "child_process";
-import { getPrebuildPath } from "../binding";
+import { getPrebuildPath } from "./binding";
 
 function main(): void {
   if (getPrebuildPath()) {
