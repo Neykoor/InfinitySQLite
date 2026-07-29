@@ -184,6 +184,22 @@ export class Database {
     }
   }
 
+  serialize(): Buffer {
+    try {
+      return this.native.serialize();
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
+  }
+
+  deserialize(data: Buffer): void {
+    try {
+      this.native.deserialize(data);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
+  }
+
   private rollbackTransaction(depth: number, savepoint: string): void {
     if (!this.native.open) return;
     try {
@@ -212,4 +228,4 @@ export class Database {
   get name(): string {
     return this.native.name;
   }
-}
+      }
