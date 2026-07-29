@@ -21,6 +21,14 @@ export interface NativeDatabase {
   pragma(pragma: string): unknown;
   setBusyTimeout(timeoutMs: number): NativeDatabase;
   registerFunction(name: string, fn: (...args: unknown[]) => unknown, nArg: number, deterministic: boolean): void;
+  registerAggregate(
+    name: string,
+    stepFn: (accumulator: unknown, ...args: unknown[]) => unknown,
+    nArg: number,
+    deterministic: boolean,
+    resultFn: ((accumulator: unknown) => unknown) | null,
+    start: unknown
+  ): void;
   checkpoint(mode?: string): CheckpointResult;
   backup(destinationPath: string): void;
   close(): void;
