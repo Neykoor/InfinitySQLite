@@ -1,4 +1,5 @@
 import { NativeStatement } from "./native";
+import { wrapNativeError } from "./error";
 
 export interface RunResult {
   changes: number;
@@ -13,34 +14,67 @@ export class Statement<Row = unknown> {
   }
 
   run(...params: unknown[]): RunResult {
-    return this.native.run(...params);
+    try {
+      return this.native.run(...params);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
   }
 
   get(...params: unknown[]): Row | undefined {
-    return this.native.get(...params) as Row | undefined;
+    try {
+      return this.native.get(...params) as Row | undefined;
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
   }
 
   all(...params: unknown[]): Row[] {
-    return this.native.all(...params) as Row[];
+    try {
+      return this.native.all(...params) as Row[];
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
   }
 
   *iterate(...params: unknown[]): IterableIterator<Row> {
-    const iterator = this.native.iterate(...params);
-    for (const row of iterator) {
-      yield row as Row;
+    let iterator: IterableIterator<unknown>;
+    try {
+      iterator = this.native.iterate(...params);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
+    try {
+      for (const row of iterator) {
+        yield row as Row;
+      }
+    } catch (error) {
+      throw wrapNativeError(error);
     }
   }
 
   pluck(enable = true): this {
-    this.native.pluck(enable);
+    try {
+      this.native.pluck(enable);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
     return this;
   }
 
   columns(): string[] {
-    return this.native.columns();
+    try {
+      return this.native.columns();
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
   }
 
   finalize(): void {
-    this.native.finalize();
+    try {
+      this.native.finalize();
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
   }
 }
