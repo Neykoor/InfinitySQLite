@@ -5,6 +5,7 @@ import { SerialQueue, QueuedTask } from "./queue";
 
 export interface DatabaseOptions {
   readonly?: boolean;
+  timeout?: number;
 }
 
 export type TransactionFunction<Args extends unknown[], Result> = (...args: Args) => Result;
@@ -117,6 +118,15 @@ export class Database {
 
   get pendingSerialized(): number {
     return this.queue.pending;
+  }
+
+  setBusyTimeout(timeoutMs: number): this {
+    try {
+      this.native.setBusyTimeout(timeoutMs);
+    } catch (error) {
+      throw wrapNativeError(error);
+    }
+    return this;
   }
 
   private rollbackTransaction(depth: number, savepoint: string): void {
