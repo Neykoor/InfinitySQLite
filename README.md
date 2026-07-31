@@ -63,11 +63,39 @@ tx([["5219999999999@s.whatsapp.net", 100]]);
 db.close();
 ```
 
-## Estructura
+## Solución de problemas: "no se encontro ningun binario nativo compatible con esta plataforma"
+
+Si tu bot corre en un hosting tipo Pterodactyl/panel VPS (Linux x64 o arm64) y al iniciar ves este error, es porque **el prebuild que trae el paquete publicado en npm no coincide con la plataforma del contenedor** (por ejemplo, el paquete puede haberse publicado con un prebuild de otra arquitectura y sin el de `linux-x64`/`linux-arm64` incluido). Cuando eso pasa, la instalación depende por completo de que el fallback de `node-gyp rebuild` se ejecute y de que el contenedor tenga toolchain de compilación (`gcc`, `g++`, `python3`, `make`).
+
+Además, desde npm 11+/12, los scripts de instalación (`preinstall`/`install`/`postinstall`) de las dependencias **se bloquean por defecto** salvo que estén declarados en el campo `allowScripts` de tu `package.json`. Si el script de instalación de InfinitySQLite queda bloqueado, ese fallback de compilación nunca corre, y el bot falla al iniciar aunque el toolchain esté disponible.
+
+**Si estás integrando InfinitySQLite en tu bot, agrega esto a tu `package.json`:**
+
+```json
+{
+  "dependencies": {
+    "infinitysqlite": "1.3.2"
+  },
+  "allowScripts": {
+    "infinitysqlite": true
+  }
+}
+```
+
+- Fija siempre una versión exacta (no `"latest"`) para evitar que dos instalaciones "idénticas" terminen resolviendo paquetes distintos.
+- Confirma que el contenedor donde corre el bot tenga `gcc`/`g++`/`python3`/`make` instalados, como respaldo por si no hay prebuild para esa plataforma.
+- Puedes diagnosticar rápido con:
+  ```js
+  console.log(process.platform, process.arch);
+  console.log(require("fs").readdirSync("node_modules/infinitysqlite/prebuilds"));
+  ```
+
+
 
 - `src/` — addon nativo en C++ (`database.cpp`, `statement.cpp`, `binder.cpp`, `addon.cpp`)
 - `deps/sqlite3/` — amalgamation oficial de SQLite (dominio público)
 - `ts/` — capa TypeScript pública (`Database`, `Statement`, errores, cola de tareas)
 - `binding.gyp` — configuración de compilación nativa
 - `.github/workflows/prebuilds.yml` — generación y publicación de binarios prebuildeados por plataforma
+
 - 
