@@ -45,9 +45,14 @@ export class Database {
     this.taskQueue = new SerialQueue();
   }
 
-  prepare<Row = unknown>(sql: string): Statement<Row> {
+  prepare<BindParameters extends unknown[] | object = unknown[], Result = unknown>(
+    sql: string
+  ): BindParameters extends unknown[] ? Statement<BindParameters, Result> : Statement<[BindParameters], Result> {
     try {
-      return new Statement<Row>(this.native.prepare(sql));
+      const statement = new Statement<any, Result>(this.native.prepare(sql));
+      return statement as BindParameters extends unknown[]
+        ? Statement<BindParameters, Result>
+        : Statement<[BindParameters], Result>;
     } catch (error) {
       throw wrapNativeError(error);
     }
@@ -228,4 +233,4 @@ export class Database {
   get name(): string {
     return this.native.name;
   }
-      }
+  }
