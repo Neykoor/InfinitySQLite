@@ -6,14 +6,14 @@ export interface RunResult {
   lastInsertRowid: number | bigint;
 }
 
-export class Statement<Row = unknown> {
+export class Statement<BindParameters extends unknown[] = unknown[], Result = unknown> {
   private native: NativeStatement;
 
   constructor(native: NativeStatement) {
     this.native = native;
   }
 
-  run(...params: unknown[]): RunResult {
+  run(...params: BindParameters): RunResult {
     try {
       return this.native.run(...params);
     } catch (error) {
@@ -21,23 +21,23 @@ export class Statement<Row = unknown> {
     }
   }
 
-  get(...params: unknown[]): Row | undefined {
+  get(...params: BindParameters): Result | undefined {
     try {
-      return this.native.get(...params) as Row | undefined;
+      return this.native.get(...params) as Result | undefined;
     } catch (error) {
       throw wrapNativeError(error);
     }
   }
 
-  all(...params: unknown[]): Row[] {
+  all(...params: BindParameters): Result[] {
     try {
-      return this.native.all(...params) as Row[];
+      return this.native.all(...params) as Result[];
     } catch (error) {
       throw wrapNativeError(error);
     }
   }
 
-  *iterate(...params: unknown[]): IterableIterator<Row> {
+  *iterate(...params: BindParameters): IterableIterator<Result> {
     let iterator: IterableIterator<unknown>;
     try {
       iterator = this.native.iterate(...params);
@@ -46,7 +46,7 @@ export class Statement<Row = unknown> {
     }
     try {
       for (const row of iterator) {
-        yield row as Row;
+        yield row as Result;
       }
     } catch (error) {
       throw wrapNativeError(error);
