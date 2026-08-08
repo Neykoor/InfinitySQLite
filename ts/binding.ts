@@ -23,10 +23,10 @@ function candidatePaths(): string[] {
   const isAndroid = platform === "linux" && detectAndroid();
 
   if (platform === "linux" && detectMusl()) {
-    candidates.push(path.join(root, "prebuilds", `linuxmusl-${arch}`, "node.napi.node"));
+    candidates.push(path.join(root, "prebuilds", `linuxmusl-${arch}`, "infinitysqlite.node"));
   }
   if (!isAndroid) {
-    candidates.push(path.join(root, "prebuilds", `${platform}-${arch}`, "node.napi.node"));
+    candidates.push(path.join(root, "prebuilds", `${platform}-${arch}`, "infinitysqlite.node"));
   }
   candidates.push(path.join(root, "build", "Release", "infinitysqlite.node"));
   candidates.push(path.join(root, "build", "Debug", "infinitysqlite.node"));
