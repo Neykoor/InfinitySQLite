@@ -33,7 +33,7 @@ jobs:
 
       - name: Instalar toolchain nativo (alpine)
         if: matrix.container != ''
-        run: apk add --no-cache python3 make g++ git
+        run: apk add --no-cache python3 make g++ git bash
 
       - uses: actions/setup-node@v4
         if: matrix.container == ''
