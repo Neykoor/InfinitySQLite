@@ -8,16 +8,26 @@ function detectMusl(): boolean {
   return fs.existsSync("/lib/ld-musl-x86_64.so.1") || fs.existsSync("/lib/ld-musl-aarch64.so.1");
 }
 
+function detectAndroid(): boolean {
+  return (
+    (typeof process.env.PREFIX === "string" && process.env.PREFIX.includes("com.termux")) ||
+    fs.existsSync("/system/build.prop")
+  );
+}
+
 function candidatePaths(): string[] {
   const root = path.join(__dirname, "..");
   const arch = process.arch;
   const platform = process.platform;
   const candidates: string[] = [];
+  const isAndroid = platform === "linux" && detectAndroid();
 
   if (platform === "linux" && detectMusl()) {
     candidates.push(path.join(root, "prebuilds", `linuxmusl-${arch}`, "node.napi.node"));
   }
-  candidates.push(path.join(root, "prebuilds", `${platform}-${arch}`, "node.napi.node"));
+  if (!isAndroid) {
+    candidates.push(path.join(root, "prebuilds", `${platform}-${arch}`, "node.napi.node"));
+  }
   candidates.push(path.join(root, "build", "Release", "infinitysqlite.node"));
   candidates.push(path.join(root, "build", "Debug", "infinitysqlite.node"));
 
@@ -40,4 +50,4 @@ export function getBinding(): NativeModule {
   }
 
   throw new Error("InfinitySQLite: no se encontro ningun binario nativo compatible con esta plataforma");
-}
+  }
