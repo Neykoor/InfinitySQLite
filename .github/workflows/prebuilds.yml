@@ -1,0 +1,108 @@
+name: prebuilds
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+          - os: ubuntu-latest
+            target: linux-arm64
+            arch: arm64
+          - os: ubuntu-24.04
+            target: linuxmusl-x64
+            container: node:20-alpine
+          - os: macos-13
+            target: darwin-x64
+          - os: macos-14
+            target: darwin-arm64
+          - os: windows-2022
+            target: win32-x64
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar toolchain nativo (alpine)
+        if: matrix.container != ''
+        run: apk add --no-cache python3 make g++ git
+
+      - uses: actions/setup-node@v4
+        if: matrix.container == ''
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm install --ignore-scripts
+
+      - name: Generar prebuild
+        run: npx prebuildify --napi --strip -t 20.0.0 ${{ matrix.arch && '--arch' || '' }} ${{ matrix.arch }}
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: prebuild-${{ matrix.target }}
+          path: prebuilds/**/*.node
+
+  collect:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: prebuild-*
+          path: prebuilds
+          merge-multiple: true
+
+      - name: Commitear prebuilds
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add prebuilds
+          git commit -m "chore: actualizar prebuilds" || echo "sin cambios"
+          git push
+
+  publish:
+    needs: collect
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Verificar que todos los prebuilds esten presentes
+        run: |
+          for target in linux-x64 linux-arm64 linuxmusl-x64 darwin-x64 darwin-arm64 win32-x64; do
+            test -f "prebuilds/${target}/node.napi.node" || { echo "Falta prebuilds/${target}/node.napi.node"; exit 1; }
+          done
+
+      - run: npm install -g npm@latest
+
+      - name: Instalar dependencias
+        run: npm ci --ignore-scripts
+
+      - name: Compilar TypeScript
+        run: npm run build:ts
+
+      - name: Publicar en npm
+        run: npm publish --provenance
