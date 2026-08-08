@@ -44,7 +44,12 @@ jobs:
         run: npm install --ignore-scripts
 
       - name: Generar prebuild
-        run: npx prebuildify --napi --strip -t 20.0.0 ${{ matrix.arch && '--arch' || '' }} ${{ matrix.arch }}
+        run: |
+          if [ -n "${{ matrix.container }}" ]; then
+            npx prebuildify --napi --strip -t 20.0.0 --tag-libc
+          else
+            npx prebuildify --napi --strip -t 20.0.0 ${{ matrix.arch && '--arch' || '' }} ${{ matrix.arch }}
+          fi
 
       - name: Subir artefacto
         uses: actions/upload-artifact@v4
