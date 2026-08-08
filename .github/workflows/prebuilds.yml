@@ -47,7 +47,8 @@ jobs:
         shell: bash
         run: |
           if [ -n "${{ matrix.container }}" ]; then
-            npx prebuildify --napi --strip -t 20.0.0 --tag-libc
+            npx prebuildify --napi --strip -t 20.0.0
+            mv prebuilds/linux-x64 prebuilds/linuxmusl-x64
           else
             npx prebuildify --napi --strip -t 20.0.0 ${{ matrix.arch && '--arch' || '' }} ${{ matrix.arch }}
           fi
