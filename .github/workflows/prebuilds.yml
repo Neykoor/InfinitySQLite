@@ -44,6 +44,7 @@ jobs:
         run: npm install --ignore-scripts
 
       - name: Generar prebuild
+        shell: bash
         run: |
           if [ -n "${{ matrix.container }}" ]; then
             npx prebuildify --napi --strip -t 20.0.0 --tag-libc
