@@ -54,11 +54,17 @@ jobs:
             npx prebuildify --napi --strip -t 20.0.0 ${{ matrix.arch && '--arch' || '' }} ${{ matrix.arch }}
           fi
 
+      - name: Preparar artefacto plano
+        shell: bash
+        run: |
+          mkdir -p artifact-out
+          cp prebuilds/${{ matrix.target }}/infinitysqlite.node artifact-out/${{ matrix.target }}.node
+
       - name: Subir artefacto
         uses: actions/upload-artifact@v4
         with:
           name: prebuild-${{ matrix.target }}
-          path: prebuilds/${{ matrix.target }}/*.node
+          path: artifact-out/${{ matrix.target }}.node
 
   collect:
     needs: build
@@ -73,8 +79,19 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: prebuild-*
-          path: prebuilds
+          path: artifact-in
           merge-multiple: true
+
+      - name: Reconstruir estructura de carpetas
+        shell: bash
+        run: |
+          rm -rf prebuilds
+          mkdir -p prebuilds
+          for f in artifact-in/*.node; do
+            target=$(basename "$f" .node)
+            mkdir -p "prebuilds/$target"
+            cp "$f" "prebuilds/$target/infinitysqlite.node"
+          done
 
       - name: Commitear prebuilds
         run: |
