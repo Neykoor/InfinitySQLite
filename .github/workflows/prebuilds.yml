@@ -58,7 +58,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prebuild-${{ matrix.target }}
-          path: prebuilds/**/*.node
+          path: prebuilds/${{ matrix.target }}/*.node
 
   collect:
     needs: build
