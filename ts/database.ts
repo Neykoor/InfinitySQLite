@@ -45,7 +45,7 @@ export class Database {
     this.taskQueue = new SerialQueue();
   }
 
-  prepare<BindParameters extends unknown[] | object = unknown[], Result = unknown>(
+  prepare<Result = unknown, BindParameters extends unknown[] | object = unknown[]>(
     sql: string
   ): BindParameters extends unknown[] ? Statement<BindParameters, Result> : Statement<[BindParameters], Result> {
     try {
@@ -233,4 +233,4 @@ export class Database {
   get name(): string {
     return this.native.name;
   }
-  }
+}
