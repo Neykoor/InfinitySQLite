@@ -1,4 +1,4 @@
-# InfinitySQLite
+<img src="./assets/banner.png" alt="InfinitySQLite" width="100%" />
 
 Binding nativo de SQLite3 para Node.js. Implementación propia en C++ (N-API), sin depender de `better-sqlite3` ni de otros wrappers de terceros, con una capa pública en TypeScript/JavaScript.
 
