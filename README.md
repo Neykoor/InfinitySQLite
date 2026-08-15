@@ -48,7 +48,6 @@
 - [⚠️ Manejo de errores](#️-manejo-de-errores)
 - [⏱️ Busy timeout](#️-busy-timeout)
 - [🧯 Solución de problemas](#-solución-de-problemas)
-- [📦 Estructura de carpetas](#-estructura-de-carpetas)
 - [📣 Licencia](#-licencia)
 
 ## 💠 ¿Para qué sirve?
@@ -99,6 +98,22 @@ npm install infinitysqlite
 ```
 
 El hook `install` (`dist/install.js`) intenta cargar un prebuild compatible con tu plataforma/arquitectura, incluyendo detección de musl (Alpine). Si no encuentra uno, corre `node-gyp rebuild` y compila desde el código fuente.
+
+> [!IMPORTANT]
+> Desde npm 11+/12, los scripts de instalación (`preinstall`/`install`/`postinstall`) de las dependencias **se bloquean por defecto** salvo que estén declarados en el campo `allowScripts` de tu `package.json`. Si el script `install` de InfinitySQLite queda bloqueado, el fallback de compilación nunca corre y tu app puede fallar al iniciar aunque exista un prebuild para tu plataforma. Configúralo así desde el principio, no esperes a que falle:
+
+```json
+{
+  "dependencies": {
+    "infinitysqlite": "1.3.10"
+  },
+  "allowScripts": {
+    "infinitysqlite": true
+  }
+}
+```
+
+Fija siempre una versión exacta (no `"latest"`) para evitar que dos instalaciones "idénticas" terminen resolviendo paquetes distintos.
 
 ### 🛠️ Requisitos para compilar
 
@@ -277,16 +292,6 @@ Además, desde npm 11+/12, los scripts de instalación (`preinstall`/`install`/`
   ```
 
 </details>
-
-## 📦 Estructura de carpetas
-
-```
-src/        → addon nativo en C++ (database.cpp, statement.cpp, binder.cpp, addon.cpp)
-deps/sqlite3/  → amalgamation oficial de SQLite (dominio público)
-ts/         → capa TypeScript pública (Database, Statement, errores, cola de tareas)
-binding.gyp → configuración de compilación nativa
-.github/workflows/prebuilds.yml → generación y publicación de binarios prebuildeados por plataforma
-```
 
 ## 📣 Licencia
 
