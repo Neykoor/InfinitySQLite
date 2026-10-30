@@ -8,12 +8,13 @@ export class SerialQueue {
     this.size += 1;
     const run = this.tail.then(task, task);
     this.tail = run.then(
-      () => undefined,
-      () => undefined
+      () => {
+        this.size -= 1;
+      },
+      () => {
+        this.size -= 1;
+      }
     );
-    run.finally(() => {
-      this.size -= 1;
-    });
     return run;
   }
 
