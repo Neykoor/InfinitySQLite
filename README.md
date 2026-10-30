@@ -11,7 +11,7 @@
 <p>
   <a href="https://www.npmjs.com/package/infinitysqlite"><img src="https://img.shields.io/npm/v/infinitysqlite?style=for-the-badge&color=8B5CF6&logo=npm&logoColor=white&label=npm" alt="npm version"/></a>
   <img src="https://img.shields.io/badge/Node.js-%E2%89%A516-2FA8FF?style=for-the-badge&logo=node.js&logoColor=white" alt="Node >=16"/>
-  <img src="https://img.shields.io/badge/license-MIT-6D5BFF?style=for-the-badge" alt="Licencia MIT"/>
+  <img src="https://img.shields.io/badge/license-Apache--2.0-6D5BFF?style=for-the-badge" alt="Licencia Apache 2.0"/>
 </p>
 
 <p>
@@ -303,5 +303,5 @@ Además, desde npm 11+/12, los scripts de instalación (`preinstall`/`install`/`
   <sub><b>Neykoor</b></sub>
 </p>
 
-Distribuido bajo licencia **MIT**. Consulta el archivo `LICENSE` del repositorio para el texto completo.
+Distribuido bajo licencia **Apache-2.0**. Consulta el archivo `LICENSE` del repositorio para el texto completo.
 
