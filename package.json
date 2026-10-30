@@ -22,6 +22,8 @@
     "install": "node dist/install.js",
     "prepack": "npm run build:ts",
     "checkprebuilds": "node scripts/check-prebuilds.js",
+    "test": "node --test test/infinitysqlite.test.js",
+    "bench": "node bench/bench.js",
     "prepublishOnly": "npm run build:ts && npm run checkprebuilds"
   },
   "dependencies": {
@@ -36,7 +38,7 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "license": "Apache-2.0 license",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Neykoor/InfinitySQLite.git"
