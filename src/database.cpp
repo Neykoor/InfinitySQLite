@@ -30,12 +30,12 @@ InfinityDatabase::InfinityDatabase(const Napi::CallbackInfo &info)
     return;
   }
   filename_ = info[0].As<Napi::String>().Utf8Value();
-  int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX;
+  int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX;
   int timeoutMs = 5000;
   if (info.Length() > 1 && info[1].IsObject()) {
     Napi::Object opts = info[1].As<Napi::Object>();
     if (opts.Has("readonly") && opts.Get("readonly").ToBoolean().Value()) {
-      flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX;
+      flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX;
     }
     if (opts.Has("timeout") && opts.Get("timeout").IsNumber()) {
       int requested = opts.Get("timeout").As<Napi::Number>().Int32Value();
