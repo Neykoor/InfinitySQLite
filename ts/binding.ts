@@ -1,0 +1,56 @@
+import fs from "fs";
+import path from "path";
+import type { NativeModule } from "./native";
+
+let cachedAddon: NativeModule | null = null;
+
+function detectMusl(): boolean {
+  return fs.existsSync("/lib/ld-musl-x86_64.so.1") || fs.existsSync("/lib/ld-musl-aarch64.so.1");
+}
+
+function detectAndroid(): boolean {
+  return (
+    (typeof process.env.PREFIX === "string" && process.env.PREFIX.includes("com.termux")) ||
+    fs.existsSync("/system/build.prop")
+  );
+}
+
+function candidatePaths(): string[] {
+  const root = path.join(__dirname, "..");
+  const arch = process.arch;
+  const platform = process.platform;
+  const prebuilds: string[] = [];
+  const builds: string[] = [];
+  const isAndroid = platform === "linux" && detectAndroid();
+
+  if (platform === "linux" && detectMusl()) {
+    prebuilds.push(path.join(root, "prebuilds", `linuxmusl-${arch}`, "infinitysqlite.node"));
+  }
+  if (!isAndroid) {
+    prebuilds.push(path.join(root, "prebuilds", `${platform}-${arch}`, "infinitysqlite.node"));
+  }
+  builds.push(path.join(root, "build", "Release", "infinitysqlite.node"));
+  builds.push(path.join(root, "build", "Debug", "infinitysqlite.node"));
+
+  return process.env.INFINITYSQLITE_PREFER_BUILD === "1"
+    ? [...builds, ...prebuilds]
+    : [...prebuilds, ...builds];
+}
+
+export function getPrebuildPath(): string | null {
+  const found = candidatePaths().find((candidate) => candidate.includes("prebuilds") && fs.existsSync(candidate));
+  return found ?? null;
+}
+
+export function getBinding(): NativeModule {
+  if (cachedAddon) return cachedAddon;
+
+  for (const candidate of candidatePaths()) {
+    if (fs.existsSync(candidate)) {
+      cachedAddon = require(candidate) as NativeModule;
+      return cachedAddon;
+    }
+  }
+
+  throw new Error("InfinitySQLite: no se encontro ningun binario nativo compatible con esta plataforma");
+  }
